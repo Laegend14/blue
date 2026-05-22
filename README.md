@@ -1,73 +1,98 @@
-# React + TypeScript + Vite
+# Blue 💙
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern Arc-native Web3 fintech application built for stablecoin payments, swapping, bridging, and unified balances.
 
-Currently, two official plugins are available:
+Blue is powered by:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Arc Network
+- Privy Authentication
+- Circle App Kit
+- USDC-native gas system
+- Viem
+- React + Vite
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# ✨ Features
 
-## Expanding the ESLint configuration
+## ✅ Authentication
+- Privy social login
+- Embedded wallet support
+- External wallet connection
+- Arc Testnet support
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## ✅ Wallet & Balances
+- Native Arc USDC balance
+- Unified wallet dashboard
+- Real-time balance fetching
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## ✅ Send
+- Send native Arc USDC
+- ERC20 transfers
+- Instant settlement on Arc
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## ✅ Swap
+- USDC ↔ EURC swaps
+- Powered by Circle App Kit Swap
+- Arc-native stablecoin liquidity
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## ✅ Crosschain Bridge
+- Bridge USDC between chains
+- Powered by Circle CCTP
+- Arc App Kit integration
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## ✅ Unified Balance
+- Chain-agnostic USDC balance
+- Deposit from multiple chains
+- Spend from one unified balance
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## ✅ Transaction Experience
+- Instant finality
+- Stable gas fees
+- USDC-native gas token
+- Optimized UX for fintech onboarding
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+
+# 🧱 Tech Stack
+
+| Technology | Usage |
+|---|---|
+| React | Frontend |
+| Vite | Build tool |
+| TypeScript | Type safety |
+| Privy | Authentication + Wallets |
+| Viem | EVM interactions |
+| Circle App Kit | Swaps + Bridge + Unified Balance |
+| Arc Network | Blockchain infrastructure |
+
+---
+
+# 🌐 Arc Network
+
+Blue is built on Arc Testnet.
+
+## Arc Testnet Details
+
+| Property | Value |
+|---|---|
+| Network | Arc Testnet |
+| Chain ID | 5042002 |
+| RPC | https://rpc.testnet.arc.network |
+| Explorer | https://testnet.arcscan.app |
+| Native Gas Token | USDC |
+
+---
+
+# 🔐 Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+VITE_PRIVY_APP_ID=YOUR_PRIVY_APP_ID
+VITE_PRIVY_CLIENT_ID=YOUR_PRIVY_CLIENT_ID
+
+VITE_USDC_ADDRESS=0x3600000000000000000000000000000000000000
+VITE_EURC_ADDRESS=0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a
+
+VITE_KIT_KEY=YOUR_CIRCLE_KIT_KEY
