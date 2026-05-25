@@ -53,6 +53,7 @@ type OperationMode =
   | "cross-chain"
   | "history"
   | "profile"
+  | "docs"
 
 type TokenBalance = {
   symbol: TokenSymbol
@@ -136,7 +137,10 @@ const navGroups: Array<{
   },
   {
     label: "Account",
-    items: [{ mode: "profile", label: "Profile" }],
+    items: [
+      { mode: "profile", label: "Profile" },
+      { mode: "docs", label: "Docs" },
+    ],
   },
 ]
 
@@ -257,6 +261,7 @@ function App() {
   const [arcName, setArcName] = useState("")
   const [nameInput, setNameInput] = useState("")
   const [loadingName, setLoadingName] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
 
   const walletAddress = user?.wallet?.address as `0x${string}` | undefined
   const signedIn = ready && authenticated
@@ -274,16 +279,34 @@ function App() {
   )
 
   const flowTotals = useMemo(() => {
-    return chainActivity.reduce(
+    const seen = new Set<string>()
+
+    return [...appActivity, ...chainActivity].reduce(
       (totals, item) => {
-        const value = Number(item.amount || 0)
-        if (item.type === "inflow") totals.inflow += value
-        if (item.type === "outflow") totals.outflow += value
+        const value = Math.abs(Number(item.amount || 0))
+        if (!value) return totals
+
+        const direction =
+          item.type === "inflow" || item.direction === "positive"
+            ? "inflow"
+            : item.type === "outflow" || item.direction === "negative"
+              ? "outflow"
+              : ""
+
+        if (!direction) return totals
+
+        const key = item.hash
+          ? `${item.hash}-${direction}-${item.token ?? ""}`
+          : item.id
+        if (seen.has(key)) return totals
+        seen.add(key)
+
+        totals[direction] += value
         return totals
       },
       { inflow: 0, outflow: 0 },
     )
-  }, [chainActivity])
+  }, [appActivity, chainActivity])
 
   const activity = useMemo(
     () =>
@@ -743,7 +766,13 @@ function App() {
     if (!walletAddress) return
     await navigator.clipboard?.writeText(walletAddress)
     setOperationStatus("Address copied")
+    setProfileOpen(false)
     window.setTimeout(() => setOperationStatus(""), 1400)
+  }
+
+  const handleLogout = () => {
+    setProfileOpen(false)
+    logout()
   }
 
   const renderNameCard = () => (
@@ -794,33 +823,38 @@ function App() {
   )
 
   const renderSendCard = () => (
-    <section className="card action-card">
-      <div className="card-header">
-        <div className="card-title">Send</div>
+    <section className="card action-card tx-action-card">
+      <div className="card-head">
+        <span className="card-title">Send Stablecoins</span>
+        <span className="network-badge">Arc Testnet</span>
       </div>
-      <div className="input-row two">
-        <label className="input-group">
-          <span className="input-label">Token</span>
+
+      <div className="token-box">
+        <div className="token-row-top">
+          <span className="token-label">Amount</span>
+          <span className="token-balance">
+            Balance: {balances.find((item) => item.symbol === sendToken)?.balance ?? "0"} {sendToken}
+          </span>
+        </div>
+        <div className="token-row-bottom">
+          <input
+            className="token-amount"
+            value={sendAmount}
+            onChange={(event) => setSendAmount(event.target.value)}
+            inputMode="decimal"
+            placeholder="0"
+          />
           <select
-            className="input-field"
+            className="token-select native-select"
             value={sendToken}
             onChange={(event) => setSendToken(event.target.value as TokenSymbol)}
           >
             <option value="USDC">USDC</option>
             <option value="EURC">EURC</option>
           </select>
-        </label>
-        <label className="input-group">
-          <span className="input-label">Amount</span>
-          <input
-            className="input-field"
-            value={sendAmount}
-            onChange={(event) => setSendAmount(event.target.value)}
-            inputMode="decimal"
-            placeholder="0.00"
-          />
-        </label>
+        </div>
       </div>
+
       <label className="input-group">
         <span className="input-label">Recipient</span>
         <input
@@ -830,6 +864,16 @@ function App() {
           placeholder="0x... or name.arc"
         />
       </label>
+      <div className="fee-block">
+        <div className="fee-row">
+          <span className="fee-key">Recipient type</span>
+          <span className="fee-val">{isArcName(recipient.trim()) ? ".arc name" : "Wallet address"}</span>
+        </div>
+        <div className="fee-row">
+          <span className="fee-key">Asset</span>
+          <span className="fee-val green">{sendToken}</span>
+        </div>
+      </div>
       <SendButton
         recipient={recipient}
         amount={sendAmount}
@@ -841,79 +885,125 @@ function App() {
   )
 
   const renderSwapCard = () => (
-    <section className="card action-card">
-      <div className="card-header">
-        <div className="card-title">Swap</div>
+    <section className="card action-card tx-action-card">
+      <div className="card-head">
+        <span className="card-title">Swap Tokens</span>
+        <span className="network-badge">Arc Testnet</span>
       </div>
-      <div className="input-row">
-        <label className="input-group">
-          <span className="input-label">From</span>
+
+      <div className="token-box">
+        <div className="token-row-top">
+          <span className="token-label">Pay</span>
+          <span className="token-balance">
+            Balance: {balances.find((item) => item.symbol === tokenIn)?.balance ?? "0"} {tokenIn}
+          </span>
+        </div>
+        <div className="token-row-bottom">
+          <input
+            className="token-amount"
+            value={swapAmount}
+            onChange={(event) => setSwapAmount(event.target.value)}
+            inputMode="decimal"
+            placeholder="0"
+          />
           <select
-            className="input-field"
+            className="token-select native-select"
             value={tokenIn}
             onChange={(event) => setTokenIn(event.target.value as TokenSymbol)}
           >
             <option value="USDC">USDC</option>
             <option value="EURC">EURC</option>
           </select>
-        </label>
+        </div>
+      </div>
+
+      <div className="swap-divider">
         <button
           type="button"
-          className="swap-arrow"
+          className="swap-btn"
           onClick={() => {
             setTokenIn(tokenOut)
             setTokenOut(tokenIn)
           }}
           title="Switch tokens"
         >
-          S
+          V
         </button>
-        <label className="input-group">
-          <span className="input-label">To</span>
+      </div>
+
+      <div className="token-box">
+        <div className="token-row-top">
+          <span className="token-label">Receive</span>
+          <span className="token-balance">
+            Balance: {balances.find((item) => item.symbol === tokenOut)?.balance ?? "0"} {tokenOut}
+          </span>
+        </div>
+        <div className="token-row-bottom">
+          <input
+            className="token-amount estimated"
+            value=""
+            readOnly
+            placeholder="Estimated"
+          />
           <select
-            className="input-field"
+            className="token-select native-select"
             value={tokenOut}
             onChange={(event) => setTokenOut(event.target.value as TokenSymbol)}
           >
             <option value="EURC">EURC</option>
             <option value="USDC">USDC</option>
           </select>
-        </label>
+        </div>
       </div>
-      <label className="input-group">
-        <span className="input-label">Amount</span>
-        <input
-          className="input-field"
-          value={swapAmount}
-          onChange={(event) => setSwapAmount(event.target.value)}
-          inputMode="decimal"
-          placeholder="1.00"
-        />
-      </label>
-      <button type="button" className="btn-primary" onClick={handleSwap}>
+
+      <div className="fee-block">
+        <div className="fee-row">
+          <span className="fee-key">Slippage</span>
+          <span className="fee-val">3.00%</span>
+        </div>
+        <div className="fee-row">
+          <span className="fee-key">Provider</span>
+          <span className="fee-val green">Circle App Kit</span>
+        </div>
+      </div>
+
+      <button type="button" className="btn-primary cta" onClick={handleSwap}>
         Swap on Arc
       </button>
     </section>
   )
 
   const renderBridgeCard = () => (
-    <section className="card action-card">
-      <div className="card-header">
-        <div className="card-title">Bridge</div>
+    <section className="card action-card tx-action-card">
+      <div className="card-head">
+        <span className="card-title">Bridge USDC</span>
+        <span className="network-badge">CCTP</span>
       </div>
-      <div className="input-row two">
-        <label className="input-group">
-          <span className="input-label">USDC Amount</span>
+
+      <div className="token-box">
+        <div className="token-row-top">
+          <span className="token-label">From Arc</span>
+          <span className="token-balance">
+            Balance: {balances.find((item) => item.symbol === "USDC")?.balance ?? "0"} USDC
+          </span>
+        </div>
+        <div className="token-row-bottom">
           <input
-            className="input-field"
+            className="token-amount"
             value={bridgeAmount}
             onChange={(event) => setBridgeAmount(event.target.value)}
             inputMode="decimal"
-            placeholder="1.00"
+            placeholder="0"
           />
-        </label>
-        <label className="input-group">
-          <span className="input-label">Destination</span>
+          <div className="token-select">
+            <div className="token-icon ti-usdc">$</div>
+            <span className="token-sym">USDC</span>
+          </div>
+        </div>
+      </div>
+
+      <label className="input-group bridge-destination">
+        <span className="input-label">Destination</span>
           <select
             className="input-field"
             value={bridgeTo}
@@ -927,42 +1017,58 @@ function App() {
               </option>
             ))}
           </select>
-        </label>
+      </label>
+
+      <div className="fee-block">
+        <div className="fee-row">
+          <span className="fee-key">Transfer protocol</span>
+          <span className="fee-val green">Circle CCTP</span>
+        </div>
+        <div className="fee-row">
+          <span className="fee-key">Source chain</span>
+          <span className="fee-val">Arc Testnet</span>
+        </div>
       </div>
-      <button type="button" className="btn-primary" onClick={handleBridge}>
+
+      <button type="button" className="btn-primary cta" onClick={handleBridge}>
         Bridge from Arc
       </button>
     </section>
   )
 
   const renderCrossChainCard = () => (
-    <section className="card action-card">
-      <div className="card-header">
-        <div className="card-title">Swap and Bridge</div>
+    <section className="card action-card tx-action-card">
+      <div className="card-head">
+        <span className="card-title">Swap and Bridge</span>
+        <span className="network-badge">Arc Route</span>
       </div>
-      <div className="input-row two">
-        <label className="input-group">
-          <span className="input-label">Source token</span>
+
+      <div className="token-box">
+        <div className="token-row-top">
+          <span className="token-label">Pay on Arc</span>
+          <span className="token-balance">
+            Balance: {balances.find((item) => item.symbol === crossTokenIn)?.balance ?? "0"} {crossTokenIn}
+          </span>
+        </div>
+        <div className="token-row-bottom">
+          <input
+            className="token-amount"
+            value={crossAmount}
+            onChange={(event) => setCrossAmount(event.target.value)}
+            inputMode="decimal"
+            placeholder="0"
+          />
           <select
-            className="input-field"
+            className="token-select native-select"
             value={crossTokenIn}
             onChange={(event) => setCrossTokenIn(event.target.value as TokenSymbol)}
           >
             <option value="EURC">EURC to USDC</option>
             <option value="USDC">USDC to USDC</option>
           </select>
-        </label>
-        <label className="input-group">
-          <span className="input-label">Amount</span>
-          <input
-            className="input-field"
-            value={crossAmount}
-            onChange={(event) => setCrossAmount(event.target.value)}
-            inputMode="decimal"
-            placeholder="1.00"
-          />
-        </label>
+        </div>
       </div>
+
       <label className="input-group">
         <span className="input-label">Destination</span>
         <select
@@ -979,7 +1085,19 @@ function App() {
           ))}
         </select>
       </label>
-      <button type="button" className="btn-primary" onClick={handleCrossChainSwap}>
+
+      <div className="fee-block">
+        <div className="fee-row">
+          <span className="fee-key">Route</span>
+          <span className="fee-val">{crossTokenIn} to USDC</span>
+        </div>
+        <div className="fee-row">
+          <span className="fee-key">Destination token</span>
+          <span className="fee-val green">USDC</span>
+        </div>
+      </div>
+
+      <button type="button" className="btn-primary cta" onClick={handleCrossChainSwap}>
         Execute route
       </button>
     </section>
@@ -1053,6 +1171,96 @@ function App() {
     </section>
   )
 
+  const renderDocsPage = () => (
+    <section className="docs-page">
+      <div className="docs-hero card">
+        <div className="docs-kicker">Blue Docs</div>
+        <h1>Stablecoin finance on Arc Network.</h1>
+        <p>
+          Blue is a stablecoin-native fintech dApp for sending, receiving,
+          swapping, bridging, and managing USDC and EURC through a simple
+          onchain interface.
+        </p>
+        <div className="docs-actions">
+          <button type="button" className="btn-primary" onClick={() => setMode("overview")}>
+            Open app
+          </button>
+          <a
+            className="qbtn"
+            href="https://github.com/Laegend14/blue"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+        </div>
+      </div>
+
+      <div className="docs-strip">
+        <div>
+          <strong>Arc Testnet</strong>
+          <span>Chain ID 5042002</span>
+        </div>
+        <div>
+          <strong>Circle App Kit</strong>
+          <span>Swaps and CCTP bridge</span>
+        </div>
+        <div>
+          <strong>.arc Names</strong>
+          <span>Human-readable wallet identity</span>
+        </div>
+      </div>
+
+      <div className="docs-grid">
+        <article className="doc-card">
+          <span>01</span>
+          <h2>Send and Receive</h2>
+          <p>
+            Transfer USDC or EURC to wallet addresses or registered .arc names.
+            The receive view exposes the wallet address and faucet path for
+            funding.
+          </p>
+        </article>
+        <article className="doc-card">
+          <span>02</span>
+          <h2>Stablecoin Swaps</h2>
+          <p>
+            Swap USDC and EURC on Arc using Circle App Kit with signed wallet
+            transactions and real explorer links after completion.
+          </p>
+        </article>
+        <article className="doc-card">
+          <span>03</span>
+          <h2>Bridge and Routes</h2>
+          <p>
+            Bridge USDC through CCTP, or swap into USDC first and then bridge
+            to supported destination testnets.
+          </p>
+        </article>
+        <article className="doc-card">
+          <span>04</span>
+          <h2>Arc Name Service</h2>
+          <p>
+            Users can mint a permanent .arc name after they fund their wallet,
+            then use that identity instead of long addresses across the app.
+          </p>
+        </article>
+      </div>
+
+      <section className="card docs-stack">
+        <div className="card-title">Technology Stack</div>
+        <div className="stack-list">
+          <span>Privy authentication</span>
+          <span>Arc Network</span>
+          <span>Circle App Kit</span>
+          <span>Viem and Ethers</span>
+          <span>USDC and EURC</span>
+          <span>Vercel deployment</span>
+        </div>
+      </section>
+    </section>
+  )
+
   const renderMainContent = () => {
     if (!signedIn) {
       return (
@@ -1109,6 +1317,7 @@ function App() {
     if (mode === "bridge") return <div className="focus-grid">{renderBridgeCard()}{renderActivityCard(6)}</div>
     if (mode === "cross-chain") return <div className="focus-grid">{renderCrossChainCard()}{renderActivityCard(6)}</div>
     if (mode === "history") return <div className="single-column">{renderActivityCard()}</div>
+    if (mode === "docs") return renderDocsPage()
 
     if (mode === "profile") {
       return (
@@ -1155,8 +1364,14 @@ function App() {
               <button type="button" className="qbtn primary" onClick={() => setMode("send")}>
                 Send
               </button>
-              <button type="button" className="qbtn" onClick={() => setMode("receive")}>
-                Receive
+              <button type="button" className="qbtn" onClick={() => setMode("swap")}>
+                Swap
+              </button>
+              <button type="button" className="qbtn" onClick={() => setMode("bridge")}>
+                Bridge
+              </button>
+              <button type="button" className="qbtn" onClick={() => setMode("cross-chain")}>
+                Route
               </button>
               <a className="qbtn" href={FAUCET_URL} target="_blank">
                 Faucet
@@ -1179,30 +1394,9 @@ function App() {
           </div>
         </section>
 
-        <div className="quick-actions">
-          <button type="button" className="qbtn" onClick={() => setMode("swap")}>
-            Swap
-          </button>
-          <button type="button" className="qbtn" onClick={() => setMode("bridge")}>
-            Bridge
-          </button>
-          <button type="button" className="qbtn" onClick={() => setMode("cross-chain")}>
-            Cross-chain
-          </button>
-          <button type="button" className="qbtn" onClick={() => setMode("profile")}>
-            Profile
-          </button>
-        </div>
-
         <div className="grid-2 dashboard-grid">
           {renderNameCard()}
           {renderActivityCard(6)}
-        </div>
-
-        <div className="grid-3">
-          {renderSendCard()}
-          {renderSwapCard()}
-          {renderBridgeCard()}
         </div>
       </>
     )
@@ -1245,7 +1439,7 @@ function App() {
             Arc Testnet
           </div>
           {signedIn && (
-            <button type="button" className="nav-item logout-item" onClick={logout}>
+            <button type="button" className="nav-item logout-item" onClick={handleLogout}>
               <span className="nav-icon">L</span>
               <span>Logout</span>
             </button>
@@ -1271,6 +1465,14 @@ function App() {
                 Tx
               </a>
             )}
+            <a
+              className="icon-btn text"
+              href="https://github.com/Laegend14/blue"
+              target="_blank"
+              rel="noreferrer"
+            >
+              GitHub
+            </a>
             <button
               type="button"
               className="icon-btn"
@@ -1280,15 +1482,42 @@ function App() {
               {theme === "dark" ? "D" : "L"}
             </button>
             {signedIn ? (
-              <button type="button" className="wallet-chip" onClick={copyAddress}>
-                <span className="wallet-avatar">
-                  {displayName.slice(0, 2).toUpperCase()}
-                </span>
-                <span>
-                  <strong>{arcName || "Wallet"}</strong>
-                  <small>{maskAddress(walletAddress)}</small>
-                </span>
-              </button>
+              <div className="profile-menu-wrap">
+                <button
+                  type="button"
+                  className="wallet-chip"
+                  onClick={() => setProfileOpen((open) => !open)}
+                  aria-expanded={profileOpen}
+                >
+                  <span className="wallet-avatar">
+                    {displayName.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span>
+                    <strong>{arcName || "Wallet"}</strong>
+                    <small>{maskAddress(walletAddress)}</small>
+                  </span>
+                </button>
+                {profileOpen && (
+                  <div className="profile-menu">
+                    <div className="profile-menu-head">
+                      <strong>{displayName}</strong>
+                      <span>{maskAddress(walletAddress)}</span>
+                    </div>
+                    <button type="button" onClick={copyAddress}>
+                      Copy wallet address
+                    </button>
+                    <button type="button" onClick={() => {
+                      setProfileOpen(false)
+                      setMode("profile")
+                    }}>
+                      View profile
+                    </button>
+                    <button type="button" onClick={handleLogout}>
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <button type="button" className="wallet-chip" onClick={login}>
                 Login

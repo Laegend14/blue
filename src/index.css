@@ -21,15 +21,10 @@ body,
 
 body {
   margin: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 #root {
   width: 100%;
-}
-
-@media (max-width: 760px) {
-  body {
-    overflow: auto;
-  }
 }
