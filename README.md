@@ -5,7 +5,7 @@ A modern Arc-native Web3 fintech application built for stablecoin payments, swap
 Blue is powered by:
 
 - Arc Network
-- Privy Authentication
+- External Web3 wallet connection
 - Circle App Kit
 - USDC-native gas system
 - Viem
@@ -16,9 +16,8 @@ Blue is powered by:
 # ✨ Features
 
 ## ✅ Authentication
-- Privy social login
-- Embedded wallet support
-- External wallet connection
+- Injected browser wallet connection
+- Existing wallet session restoration
 - Arc Testnet support
 
 ## ✅ Wallet & Balances
@@ -61,7 +60,7 @@ Blue is powered by:
 | React | Frontend |
 | Vite | Build tool |
 | TypeScript | Type safety |
-| Privy | Authentication + Wallets |
+| External Web3 wallet | Wallet connection |
 | Viem | EVM interactions |
 | Circle App Kit | Swaps + Bridge + Unified Balance |
 | Arc Network | Blockchain infrastructure |
@@ -89,9 +88,6 @@ Blue is built on Arc Testnet.
 Create a `.env` file in the project root:
 
 ```env
-VITE_PRIVY_APP_ID=YOUR_PRIVY_APP_ID
-VITE_PRIVY_CLIENT_ID=YOUR_PRIVY_CLIENT_ID
-
 VITE_USDC_ADDRESS=0x3600000000000000000000000000000000000000
 VITE_EURC_ADDRESS=0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a
 

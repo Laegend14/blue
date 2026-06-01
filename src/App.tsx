@@ -1,6 +1,5 @@
 import { AppKit } from "@circle-fin/app-kit"
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2"
-import { usePrivy, useWallets } from "@privy-io/react-auth"
 import { ethers } from "ethers"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
@@ -34,6 +33,7 @@ import {
   stripArcSuffix,
   toArcName,
 } from "./lib/nameService"
+import { useWallet } from "./providers/WalletProvider"
 
 import "./App.css"
 
@@ -225,8 +225,14 @@ async function ensureArcNetwork(provider: Eip1193Provider) {
 }
 
 function App() {
-  const { authenticated, login, logout, ready, user } = usePrivy()
-  const { wallets } = useWallets()
+  const {
+    address: walletAddress,
+    connect,
+    connected,
+    disconnect,
+    getProvider,
+    ready,
+  } = useWallet()
 
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem("blue-theme")
@@ -263,10 +269,8 @@ function App() {
   const [loadingName, setLoadingName] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
 
-  const walletAddress = user?.wallet?.address as `0x${string}` | undefined
-  const signedIn = ready && authenticated
-  const displayName =
-    arcName || user?.email?.address || maskAddress(walletAddress) || "Blue user"
+  const signedIn = ready && connected
+  const displayName = arcName || maskAddress(walletAddress) || "Blue user"
 
   const totalUsd = useMemo(
     () =>
@@ -343,12 +347,6 @@ function App() {
     },
     [],
   )
-
-  const getProvider = async () => {
-    const wallet = wallets[0]
-    if (!wallet) throw new Error("Connect wallet first")
-    return (await wallet.getEthereumProvider()) as Eip1193Provider
-  }
 
   const getAdapter = async () => {
     const provider = await getProvider()
@@ -770,9 +768,19 @@ function App() {
     window.setTimeout(() => setOperationStatus(""), 1400)
   }
 
-  const handleLogout = () => {
+  const handleConnect = async () => {
+    setError("")
+
+    try {
+      await connect()
+    } catch (err) {
+      setError(normalizeError(err))
+    }
+  }
+
+  const handleDisconnect = () => {
     setProfileOpen(false)
-    logout()
+    disconnect()
   }
 
   const renderNameCard = () => (
@@ -1250,7 +1258,7 @@ function App() {
       <section className="card docs-stack">
         <div className="card-title">Technology Stack</div>
         <div className="stack-list">
-          <span>Privy authentication</span>
+          <span>External Web3 wallet</span>
           <span>Arc Network</span>
           <span>Circle App Kit</span>
           <span>Viem and Ethers</span>
@@ -1270,11 +1278,11 @@ function App() {
             <p className="balance-label">Blue on Arc Network</p>
             <h1>Your USDC and EURC command center.</h1>
             <p>
-              Login with Privy to send, receive, swap, bridge, and mint your
+              Connect your Web3 wallet to send, receive, swap, bridge, and mint your
               permanent .arc name.
             </p>
-            <button type="button" className="btn-primary" onClick={login}>
-              Login to Blue
+            <button type="button" className="btn-primary" onClick={() => void handleConnect()}>
+              Connect wallet
             </button>
           </div>
         </section>
@@ -1339,11 +1347,11 @@ function App() {
               </span>
               <span className={`toggle ${theme === "dark" ? "on" : ""}`} />
             </button>
-            <button type="button" className="settings-row" onClick={logout}>
+            <button type="button" className="settings-row" onClick={disconnect}>
               <span className="settings-icon">L</span>
               <span>
-                <strong>Logout</strong>
-                <small>End this Privy session</small>
+                <strong>Disconnect</strong>
+                <small>Disconnect this wallet from Blue</small>
               </span>
             </button>
           </section>
@@ -1439,9 +1447,9 @@ function App() {
             Arc Testnet
           </div>
           {signedIn && (
-            <button type="button" className="nav-item logout-item" onClick={handleLogout}>
+            <button type="button" className="nav-item logout-item" onClick={handleDisconnect}>
               <span className="nav-icon">L</span>
-              <span>Logout</span>
+              <span>Disconnect</span>
             </button>
           )}
         </div>
@@ -1454,7 +1462,7 @@ function App() {
               {signedIn ? "Welcome back" : "Welcome to Blue"}
             </span>
             <strong className="welcome-name">
-              {signedIn ? displayName : "Login to continue"}
+              {signedIn ? displayName : "Connect wallet to continue"}
             </strong>
           </div>
 
@@ -1512,15 +1520,15 @@ function App() {
                     }}>
                       View profile
                     </button>
-                    <button type="button" onClick={handleLogout}>
-                      Logout
+                    <button type="button" onClick={handleDisconnect}>
+                      Disconnect
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <button type="button" className="wallet-chip" onClick={login}>
-                Login
+              <button type="button" className="wallet-chip" onClick={() => void handleConnect()}>
+                Connect wallet
               </button>
             )}
           </div>

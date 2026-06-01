@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ethers } from "ethers";
-import { useWallets } from "@privy-io/react-auth";
+import { useWallet } from "../providers/WalletProvider";
 
 import {
   FX_ESCROW_ABI,
@@ -13,13 +13,13 @@ type Props = {
 };
 
 export default function StableFXSwap1({ amount }: Props) {
-  const { wallets } = useWallets();
+  const { connected, getProvider } = useWallet();
 
   const [loading, setLoading] = useState(false);
 
   const handleSwap = async () => {
     try {
-      if (!wallets.length) {
+      if (!connected) {
         alert("No wallet connected");
         return;
       }
@@ -31,9 +31,7 @@ export default function StableFXSwap1({ amount }: Props) {
 
       setLoading(true);
 
-      const wallet = wallets[0];
-
-      const ethereumProvider = await wallet.getEthereumProvider();
+      const ethereumProvider = getProvider();
 
       const provider = new ethers.BrowserProvider(ethereumProvider);
 

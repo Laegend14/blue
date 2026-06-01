@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ethers } from "ethers";
-import { useWallets } from "@privy-io/react-auth";
+import { useWallet } from "../providers/WalletProvider";
 
 import {
   ERC20_ABI,
@@ -18,7 +18,7 @@ export default function ApproveButton({
   amount,
   token,
 }: Props) {
-  const { wallets } = useWallets();
+  const { connected, getProvider } = useWallet();
 
   const [loading, setLoading] = useState(false);
 
@@ -29,17 +29,14 @@ export default function ApproveButton({
 
   const handleApprove = async () => {
     try {
-      if (!wallets.length) {
+      if (!connected) {
         alert("No wallet connected");
         return;
       }
 
       setLoading(true);
 
-      const wallet = wallets[0];
-
-      const ethereumProvider =
-        await wallet.getEthereumProvider();
+      const ethereumProvider = getProvider();
 
       const provider =
         new ethers.BrowserProvider(ethereumProvider);

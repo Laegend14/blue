@@ -1,8 +1,8 @@
-import { useWallets } from "@privy-io/react-auth"
 import { ethers } from "ethers"
 
 import { EURC_ADDRESS, USDC_ADDRESS } from "../../lib/arc"
 import { ERC20_ABI } from "../../lib/contracts"
+import { useWallet } from "../../providers/WalletProvider"
 
 type Props = {
   recipient: string
@@ -19,11 +19,11 @@ export default function SendButton({
   resolveRecipient,
   onSuccess,
 }: Props) {
-  const { wallets } = useWallets()
+  const { connected, getProvider } = useWallet()
 
   const handleSend = async () => {
     try {
-      if (!wallets.length) {
+      if (!connected) {
         alert("Connect wallet first")
         return
       }
@@ -37,8 +37,7 @@ export default function SendButton({
         ? await resolveRecipient(recipient)
         : (recipient as `0x${string}`)
 
-      const wallet = wallets[0]
-      const provider = await wallet.getEthereumProvider()
+      const provider = getProvider()
       const ethersProvider = new ethers.BrowserProvider(provider)
       const signer = await ethersProvider.getSigner()
 
